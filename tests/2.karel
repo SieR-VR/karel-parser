@@ -1,0 +1,12 @@
+function main() {
+    repeat(4) {
+        moveTwiceAndPutBeeperAndFinallyTurnLeft();
+    }
+}
+
+function moveTwiceAndPutBeeperAndFinallyTurnLeft() {
+    move();
+    move();
+    putBeeper();
+    turnLeft();
+}
