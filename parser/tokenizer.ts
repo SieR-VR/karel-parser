@@ -1,4 +1,16 @@
-export function tokenize(input: string): Token[] {
+import { Result, Ok, Err } from "ts-features";
+// import { 
+//     Diagnostic,
+//     DiagnosticSeverity 
+// } from "vscode-languageserver/node";
+
+// for compatibility with vscode-languageserver
+type Diagnostic = any; 
+enum DiagnosticSeverity {
+    Error = 1,
+};
+
+export function tokenize(input: string): Result<Token[], Diagnostic> {
     const tokens = [] as Token[];
     let current = 0;
     let line = 1;
@@ -144,10 +156,17 @@ export function tokenize(input: string): Token[] {
             continue;
         }
 
-        throw new Error(`Unexpected character: ${char} at line ${line} and column ${col}`);
+        return Err({
+            message: `Unexpected character '${char}'`,
+            severity: DiagnosticSeverity.Error,
+            range: {
+                start: { line, character: col },
+                end: { line, character: col + 1 }
+            },
+        });
     }
 
-    return tokens;
+    return Ok(tokens);
 }
 
 function reservedWordHelper(word: string): TokenKind {

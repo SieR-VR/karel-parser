@@ -1,3 +1,16 @@
+import { Result, Ok, Err } from "ts-features";
+// import { 
+//     Diagnostic,
+//     DiagnosticSeverity 
+// } from "vscode-languageserver/node";
+
+// for compatibility with vscode-languageserver
+type Diagnostic = any; 
+enum DiagnosticSeverity {
+    Error = 1,
+};
+
+
 import {
     Token,
     TokenKind,
@@ -5,7 +18,7 @@ import {
     isNumberToken,
 } from './tokenizer';
 
-export function parse(input: Token[]): SourceFile {
+export function parse(input: Token[]): Result<SourceFile, Diagnostic> {
     const sourceFile = {
         functions: [] as FunctionDeclaration[]
     };
@@ -16,16 +29,22 @@ export function parse(input: Token[]): SourceFile {
         const token = input[current];
 
         if (token.kind === TokenKind.FunctionToken) {
-            const functionDeclaration = parseFunctionDeclaration(input, current);
+            const functionDeclarationUnchecked = parseFunctionDeclaration(input, current);
+            if (functionDeclarationUnchecked.is_err()) {
+                return Err(functionDeclarationUnchecked.unwrap_err());
+            }
+
+            const functionDeclaration = functionDeclarationUnchecked.unwrap();
+
             sourceFile.functions.push(functionDeclaration);
             current = functionDeclaration.endPos;
         }
     }
 
-    return sourceFile;
+    return Ok(sourceFile);
 }
 
-function parseFunctionDeclaration(input: Token[], startPos: number): FunctionDeclaration {
+function parseFunctionDeclaration(input: Token[], startPos: number): Result<FunctionDeclaration, Diagnostic> {
     const functionDeclaration = {
         kind: 'FunctionDeclaration',
         name: '',
@@ -37,7 +56,20 @@ function parseFunctionDeclaration(input: Token[], startPos: number): FunctionDec
     let current = startPos + 1;
     const functionIdentifer = input[current];
     if (!isIdentifierToken(functionIdentifer)) {
-        throw new Error('Expected identifier');
+        return Err({
+            message: 'Expected identifier',
+            severity: DiagnosticSeverity.Error,
+            range: {
+                start: {
+                    line: functionIdentifer.line,
+                    character: functionIdentifer.col
+                },
+                end: {
+                    line: functionIdentifer.line,
+                    character: functionIdentifer.col + (functionIdentifer.endPos - functionIdentifer.startPos)
+                }
+            }
+        });
     }
 
     functionDeclaration.name = functionIdentifer.value;
@@ -45,23 +77,55 @@ function parseFunctionDeclaration(input: Token[], startPos: number): FunctionDec
 
     const lparen = input[current];
     if (lparen.kind !== TokenKind.LParen) {
-        throw new Error('Expected (');
+        return Err({
+            message: 'Expected (',
+            severity: DiagnosticSeverity.Error,
+            range: {
+                start: {
+                    line: lparen.line,
+                    character: lparen.col
+                },
+                end: {
+                    line: lparen.line,
+                    character: lparen.col + (lparen.endPos - lparen.startPos)
+                }
+            }
+        });
     }
     current++;
 
     const rparen = input[current];
     if (rparen.kind !== TokenKind.RParen) {
-        throw new Error('Expected )');
+        return Err({
+            message: 'Expected )',
+            severity: DiagnosticSeverity.Error,
+            range: {
+                start: {
+                    line: rparen.line,
+                    character: rparen.col
+                },
+                end: {
+                    line: rparen.line,
+                    character: rparen.col + (rparen.endPos - rparen.startPos)
+                }
+            }
+        });
     }
     current++;
 
-    functionDeclaration.body = parseBlockStatement(input, current);
-    functionDeclaration.endPos = functionDeclaration.body.endPos;
+    const blockStatementUnchecked = parseBlockStatement(input, current);
+    if (blockStatementUnchecked.is_err()) {
+        return Err(blockStatementUnchecked.unwrap_err());
+    }
 
-    return functionDeclaration;
+    const blockStatement = blockStatementUnchecked.unwrap();
+    functionDeclaration.body = blockStatement;
+    functionDeclaration.endPos = blockStatement.endPos;
+
+    return Ok(functionDeclaration);
 }
 
-function parseBlockStatement(input: Token[], startPos: number): BlockStatement {
+function parseBlockStatement(input: Token[], startPos: number): Result<BlockStatement, Diagnostic> {
     const blockStatement = {
         kind: 'BlockStatement',
         statements: [] as Statement[],
@@ -73,7 +137,20 @@ function parseBlockStatement(input: Token[], startPos: number): BlockStatement {
 
     const lbrace = input[current];
     if (lbrace.kind !== TokenKind.LBrace) {
-        throw new Error('Expected {');
+        return Err({
+            message: 'Expected {',
+            severity: DiagnosticSeverity.Error,
+            range: {
+                start: {
+                    line: lbrace.line,
+                    character: lbrace.col
+                },
+                end: {
+                    line: lbrace.line,
+                    character: lbrace.col + (lbrace.endPos - lbrace.startPos)
+                }
+            }
+        });
     }
     current++;
 
@@ -82,18 +159,36 @@ function parseBlockStatement(input: Token[], startPos: number): BlockStatement {
 
         if (token.kind === TokenKind.RBrace) {
             blockStatement.endPos = current + 1;
-            return blockStatement;
+            return Ok(blockStatement);
         }
 
-        const statement = parseStatement(input, current);
+        const statementUnchecked = parseStatement(input, current);
+        if (statementUnchecked.is_err()) {
+            return Err(statementUnchecked.unwrap_err());
+        }
+
+        const statement = statementUnchecked.unwrap();
         blockStatement.statements.push(statement);
         current = statement.endPos;
     }
 
-    throw new Error('Expected }');
+    return Err({
+        message: 'Expected }',
+        severity: DiagnosticSeverity.Error,
+        range: {
+            start: {
+                line: input[current - 1].line,
+                character: input[current - 1].col
+            },
+            end: {
+                line: input[current - 1].line,
+                character: input[current - 1].col + (input[current - 1].endPos - input[current - 1].startPos)
+            }
+        }
+    });
 }
 
-function parseStatement(input: Token[], startPos: number): Statement {
+function parseStatement(input: Token[], startPos: number): Result<Statement, Diagnostic> {
     const token = input[startPos];
 
     if (token.kind === TokenKind.Identifier) {
@@ -116,10 +211,23 @@ function parseStatement(input: Token[], startPos: number): Statement {
         return parseBlockStatement(input, startPos);
     }
 
-    throw new Error(`Unexpected token: ${token.kind}`);
+    return Err({
+        message: `Expected token: ${token.kind}`,
+        severity: DiagnosticSeverity.Error,
+        range: {
+            start: {
+                line: token.line,
+                character: token.col
+            },
+            end: {
+                line: token.line,
+                character: token.col + (token.endPos - token.startPos)
+            }
+        }
+    });
 }
 
-function parseCallStatement(input: Token[], startPos: number): CallStatement {
+function parseCallStatement(input: Token[], startPos: number): Result<CallStatement, Diagnostic> {
     const callStatement = {
         kind: 'CallStatement',
         function: '',
@@ -131,34 +239,86 @@ function parseCallStatement(input: Token[], startPos: number): CallStatement {
 
     const identifier = input[current];
     if (!isIdentifierToken(identifier)) {
-        throw new Error('Expected identifier');
+        return Err({
+            message: 'Expected identifier',
+            severity: DiagnosticSeverity.Error,
+            range: {
+                start: {
+                    line: identifier.line,
+                    character: identifier.col
+                },
+                end: {
+                    line: identifier.line,
+                    character: identifier.col + (identifier.endPos - identifier.startPos)
+                }
+            }
+        });
     }
     callStatement.function = identifier.value;
     current++;
 
     const lparen = input[current];
     if (lparen.kind !== TokenKind.LParen) {
-        throw new Error('Expected (');
+        return Err({
+            message: 'Expected (',
+            severity: DiagnosticSeverity.Error,
+            range: {
+                start: {
+                    line: lparen.line,
+                    character: lparen.col
+                },
+                end: {
+                    line: lparen.line,
+                    character: lparen.col + (lparen.endPos - lparen.startPos)
+                }
+            }
+        });
     }
     current++;
 
     const rparen = input[current];
     if (rparen.kind !== TokenKind.RParen) {
-        throw new Error('Expected )');
+        return Err({
+            message: 'Expected )',
+            severity: DiagnosticSeverity.Error,
+            range: {
+                start: {
+                    line: rparen.line,
+                    character: rparen.col
+                },
+                end: {
+                    line: rparen.line,
+                    character: rparen.col + (rparen.endPos - rparen.startPos)
+                }
+            }
+        });
     }
     current++;
 
     const semicolon = input[current];
     if (semicolon.kind !== TokenKind.SemiColon) {
-        throw new Error('Expected ;');
+        return Err({
+            message: 'Expected ;',
+            severity: DiagnosticSeverity.Error,
+            range: {
+                start: {
+                    line: semicolon.line,
+                    character: semicolon.col
+                },
+                end: {
+                    line: semicolon.line,
+                    character: semicolon.col + (semicolon.endPos - semicolon.startPos)
+                }
+            }
+        });
     }
     current++;
 
     callStatement.endPos = current;
-    return callStatement;
+    return Ok(callStatement);
 }
 
-function parseIfStatement(input: Token[], startPos: number): IfStatement {
+function parseIfStatement(input: Token[], startPos: number): Result<IfStatement, Diagnostic> {
     const ifStatement = {
         kind: 'IfStatement',
         condition_function: '',
@@ -171,49 +331,126 @@ function parseIfStatement(input: Token[], startPos: number): IfStatement {
 
     const lparen = input[current];
     if (lparen.kind !== TokenKind.LParen) {
-        throw new Error('Expected (');
+        return Err({
+            message: 'Expected (',
+            severity: DiagnosticSeverity.Error,
+            range: {
+                start: {
+                    line: lparen.line,
+                    character: lparen.col
+                },
+                end: {
+                    line: lparen.line,
+                    character: lparen.col + (lparen.endPos - lparen.startPos)
+                }
+            }
+        });
     }
     current++;
 
     const identifier = input[current];
     if (!isIdentifierToken(identifier)) {
-        throw new Error('Expected identifier');
+        return Err({
+            message: 'Expected identifier',
+            severity: DiagnosticSeverity.Error,
+            range: {
+                start: {
+                    line: identifier.line,
+                    character: identifier.col
+                },
+                end: {
+                    line: identifier.line,
+                    character: identifier.col + (identifier.endPos - identifier.startPos)
+                }
+            }
+        });
     }
     ifStatement.condition_function = identifier.value;
     current++;
 
     const lparen2 = input[current];
     if (lparen2.kind !== TokenKind.LParen) {
-        throw new Error('Expected (');
+        return Err({
+            message: 'Expected (',
+            severity: DiagnosticSeverity.Error,
+            range: {
+                start: {
+                    line: lparen2.line,
+                    character: lparen2.col
+                },
+                end: {
+                    line: lparen2.line,
+                    character: lparen2.col + (lparen2.endPos - lparen2.startPos)
+                }
+            }
+        });
     }
     current++;
 
     const rparen2 = input[current];
     if (rparen2.kind !== TokenKind.RParen) {
-        throw new Error('Expected )');
+        return Err({
+            message: 'Expected )',
+            severity: DiagnosticSeverity.Error,
+            range: {
+                start: {
+                    line: rparen2.line,
+                    character: rparen2.col
+                },
+                end: {
+                    line: rparen2.line,
+                    character: rparen2.col + (rparen2.endPos - rparen2.startPos)
+                }
+            }
+        });
     }
     current++;
 
     const rparen = input[current];
     if (rparen.kind !== TokenKind.RParen) {
-        throw new Error('Expected )');
+        return Err({
+            message: 'Expected )',
+            severity: DiagnosticSeverity.Error,
+            range: {
+                start: {
+                    line: rparen.line,
+                    character: rparen.col
+                },
+                end: {
+                    line: rparen.line,
+                    character: rparen.col + (rparen.endPos - rparen.startPos)
+                }
+            }
+        });
     }
     current++;
 
-    ifStatement.body = parseBlockStatement(input, current);
+    const ifBlockUnchecked = parseBlockStatement(input, current);
+    if (ifBlockUnchecked.is_err()) {
+        return Err(ifBlockUnchecked.unwrap_err());
+    }
+
+    const ifBlock = ifBlockUnchecked.unwrap();
+    ifStatement.body = ifBlock;
 
     const elseToken = input[ifStatement.body.endPos];
     if (elseToken.kind === TokenKind.ElseToken) {
-        ifStatement.else = parseBlockStatement(input, ifStatement.body.endPos + 1);
+        const elseBlockUnchecked = parseBlockStatement(input, elseToken.endPos + 1);
+        if (elseBlockUnchecked.is_err()) {
+            return Err(elseBlockUnchecked.unwrap_err());
+        }
+
+        const elseBlock = elseBlockUnchecked.unwrap();
+        ifStatement.else = elseBlock;
         ifStatement.endPos = ifStatement.else.endPos;
     } else {
         ifStatement.endPos = ifStatement.body.endPos;
     }
 
-    return ifStatement;
+    return Ok(ifStatement);
 }
 
-function parseWhileStatement(input: Token[], startPos: number): WhileStatement {
+function parseWhileStatement(input: Token[], startPos: number): Result<WhileStatement, Diagnostic> {
     const whileStatement = {
         kind: 'WhileStatement',
         condition_function: '',
@@ -226,42 +463,113 @@ function parseWhileStatement(input: Token[], startPos: number): WhileStatement {
 
     const lparen = input[current];
     if (lparen.kind !== TokenKind.LParen) {
-        throw new Error('Expected (');
+        return Err({
+            message: 'Expected (',
+            severity: DiagnosticSeverity.Error,
+            range: {
+                start: {
+                    line: lparen.line,
+                    character: lparen.col
+                },
+                end: {
+                    line: lparen.line,
+                    character: lparen.col + (lparen.endPos - lparen.startPos)
+                },
+            },
+        });
     }
     current++;
 
     const identifier = input[current];
     if (!isIdentifierToken(identifier)) {
-        throw new Error('Expected identifier');
+        return Err({
+            message: 'Expected identifier',
+            severity: DiagnosticSeverity.Error,
+            range: {
+                start: {
+                    line: identifier.line,
+                    character: identifier.col
+                },
+                end: {
+                    line: identifier.line,
+                    character: identifier.col + (identifier.endPos - identifier.startPos)
+                },
+            },
+        });
     }
     whileStatement.condition_function = identifier.value;
     current++;
 
     const lparen2 = input[current];
     if (lparen2.kind !== TokenKind.LParen) {
-        throw new Error('Expected (');
+        return Err({
+            message: 'Expected (',
+            severity: DiagnosticSeverity.Error,
+            range: {
+                start: {
+                    line: lparen2.line,
+                    character: lparen2.col
+                },
+                end: {
+                    line: lparen2.line,
+                    character: lparen2.col + (lparen2.endPos - lparen2.startPos)
+                },
+            },
+        });
     }
     current++;
 
     const rparen2 = input[current];
     if (rparen2.kind !== TokenKind.RParen) { 
-        throw new Error('Expected )');
+        return Err({
+            message: 'Expected )',
+            severity: DiagnosticSeverity.Error,
+            range: {
+                start: {
+                    line: rparen2.line,
+                    character: rparen2.col
+                },
+                end: {
+                    line: rparen2.line,
+                    character: rparen2.col + (rparen2.endPos - rparen2.startPos)
+                },
+            },
+        });
     }
     current++;
 
     const rparen = input[current];
     if (rparen.kind !== TokenKind.RParen) {
-        throw new Error('Expected )');
+        return Err({
+            message: 'Expected )',
+            severity: DiagnosticSeverity.Error,
+            range: {
+                start: {
+                    line: rparen.line,
+                    character: rparen.col
+                },
+                end: {
+                    line: rparen.line,
+                    character: rparen.col + (rparen.endPos - rparen.startPos)
+                },
+            },
+        });
     }
     current++;
 
-    whileStatement.body = parseBlockStatement(input, current);
+    const whileBlockUnchecked = parseBlockStatement(input, current);
+    if (whileBlockUnchecked.is_err()) {
+        return Err(whileBlockUnchecked.unwrap_err());
+    }
+
+    const whileBlock = whileBlockUnchecked.unwrap();
+    whileStatement.body = whileBlock
     whileStatement.endPos = whileStatement.body.endPos;
 
-    return whileStatement;
+    return Ok(whileStatement);
 }
 
-function parseRepeatStatement(input: Token[], startPos: number): RepeatStatement {
+function parseRepeatStatement(input: Token[], startPos: number): Result<RepeatStatement, Diagnostic> {
     const repeatStatement = {
         kind: 'RepeatStatement',
         repeat_count: 0,
@@ -274,27 +582,72 @@ function parseRepeatStatement(input: Token[], startPos: number): RepeatStatement
 
     const lparen = input[current];
     if (lparen.kind !== TokenKind.LParen) {
-        throw new Error('Expected (');
+        return Err({
+            message: 'Expected (',
+            severity: DiagnosticSeverity.Error,
+            range: {
+                start: {
+                    line: lparen.line,
+                    character: lparen.col
+                },
+                end: {
+                    line: lparen.line,
+                    character: lparen.col + (lparen.endPos - lparen.startPos)
+                },
+            },
+        });
     }
     current++;
 
     const number = input[current];
     if (!isNumberToken(number)) {
-        throw new Error('Expected number');
+        return Err({
+            message: 'Expected number',
+            severity: DiagnosticSeverity.Error,
+            range: {
+                start: {
+                    line: number.line,
+                    character: number.col
+                },
+                end: {
+                    line: number.line,
+                    character: number.col + (number.endPos - number.startPos)
+                },
+            },
+        });
     }
     repeatStatement.repeat_count = number.value;
     current++;
 
     const rparen = input[current];
     if (rparen.kind !== TokenKind.RParen) {
-        throw new Error('Expected )');
+        return Err({
+            message: 'Expected )',
+            severity: DiagnosticSeverity.Error,
+            range: {
+                start: {
+                    line: rparen.line,
+                    character: rparen.col
+                },
+                end: {
+                    line: rparen.line,
+                    character: rparen.col + (rparen.endPos - rparen.startPos)
+                },
+            },
+        });
     }
     current++;
 
-    repeatStatement.body = parseBlockStatement(input, current);
+    const repeatBlockUnchecked = parseBlockStatement(input, current);
+    if (repeatBlockUnchecked.is_err()) {
+        return Err(repeatBlockUnchecked.unwrap_err());
+    }
+
+    const repeatBlock = repeatBlockUnchecked.unwrap();
+    repeatStatement.body = repeatBlock;
     repeatStatement.endPos = repeatStatement.body.endPos;
 
-    return repeatStatement;
+    return Ok(repeatStatement);
 }
 
 export interface SourceFile {
