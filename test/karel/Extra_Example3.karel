@@ -1,0 +1,14 @@
+function moveThreeAndPutBeeperAndFinallyTurnLeft() {
+    move();
+    move();
+    move();
+    putBeeper();
+    turnLeft();
+}
+
+function main() {
+    moveThreeAndPutBeeperAndFinallyTurnLeft();
+    moveThreeAndPutBeeperAndFinallyTurnLeft();
+    moveThreeAndPutBeeperAndFinallyTurnLeft();
+    moveThreeAndPutBeeperAndFinallyTurnLeft();
+}

@@ -1,0 +1,8 @@
+function main() {
+    turnLeft();
+    move();
+    turnLeft();
+    turnLeft();
+    turnLeft();
+    move();
+}

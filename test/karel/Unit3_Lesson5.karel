@@ -1,0 +1,9 @@
+function main() {
+    putBeeper();
+    move();
+    putBeeper();
+    move();
+    putBeeper();
+    move();
+    putBeeper();
+}

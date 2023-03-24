@@ -1,0 +1,40 @@
+function putLine() {
+    repeat(3) {
+        move();
+        putBeeper();
+    }
+}
+
+function moveDiagonalUp() {
+    move();
+    turnLeft();
+    move();
+    turnRight();
+}
+
+function moveDiagonalDown() {
+    move();
+    turnRight();
+    move();
+    turnLeft();
+}
+
+function main() {
+    putLine();
+    turnLeft();
+
+    repeat(3) {
+        moveDiagonalUp();
+        putBeeper();
+    }
+    turnRight();
+
+    putLine();
+    turnRight();
+
+    repeat(3) {
+        moveDiagonalDown();
+        putBeeper();
+    }
+    turnLeft();
+}

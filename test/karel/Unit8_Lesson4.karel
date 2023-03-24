@@ -1,0 +1,13 @@
+function main() {
+    cleanCorner();
+    while (frontIsClear()) {
+        move();
+        cleanCorner();
+    }
+}
+
+function cleanCorner() {
+    while (beepersPresent()) {
+        pickBeeper();
+    }
+}

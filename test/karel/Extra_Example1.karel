@@ -1,0 +1,27 @@
+function moveForward() {
+    move();
+    move();
+    turnLeft();
+}
+
+function moveBackward() {
+    turnRight();
+    move();
+    move();
+}
+
+function initBeeperPosition() {
+    moveForward();
+    moveForward();
+    move();
+    putBeeper();
+    turnAround();
+    move();
+    moveBackward();
+    moveBackward();
+    turnAround();
+}
+
+function main() {
+    initBeeperPosition();
+}

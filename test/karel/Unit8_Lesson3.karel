@@ -1,0 +1,11 @@
+function main() {
+    putBeeperLine();
+}
+
+function putBeeperLine() {
+    putBeeper();
+    while (frontIsClear()) {
+        move();
+        putBeeper();
+    }
+}

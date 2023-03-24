@@ -1,0 +1,13 @@
+function turnRight() {
+    turnLeft();
+    turnLeft();
+    turnLeft();
+}
+
+function main() {
+    move();
+    turnRight();
+    move();
+    turnRight();
+    move();
+}

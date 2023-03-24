@@ -1,0 +1,34 @@
+function turnRight() {
+    turnLeft();
+    turnLeft();
+    turnLeft();
+}
+
+function moveDiagonalUp() {
+    move();
+    turnLeft();
+    move();
+    turnRight();
+}
+
+function moveDiagonalDown() {
+    move();
+    turnRight();
+    move();
+    turnLeft();
+}
+
+function main() {
+    putBeeper();
+    moveDiagonalUp();
+    putBeeper();
+    moveDiagonalUp();
+    putBeeper();
+    moveDiagonalUp();
+    putBeeper();
+    turnRight();
+    moveDiagonalDown();
+    moveDiagonalDown();
+    moveDiagonalDown();
+}
+

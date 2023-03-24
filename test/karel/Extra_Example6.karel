@@ -1,0 +1,19 @@
+function unitMove() {
+    turnLeft();
+    putBeeper();
+    move();
+    putBeeper();
+    turnRight();
+    move();
+    putBeeper();
+    turnRight();
+    move();
+    putBeeper();
+    turnLeft();
+}
+
+function main() {
+    unitMove();
+    move();
+    unitMove();
+}

@@ -1,0 +1,7 @@
+function main() {
+    move();
+    while(beepersPresent()) {
+       pickBeeper();
+    }
+    move();
+}

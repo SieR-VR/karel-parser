@@ -1,0 +1,9 @@
+function main() {
+    moveToWall();
+}
+
+function moveToWall() {
+    while (frontIsClear()) {
+        move();
+    }
+}

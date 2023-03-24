@@ -1,0 +1,37 @@
+function main() {
+    putBeeperLine();
+    reset();
+
+    while (frontIsClear()) {
+        move();
+        turnRight();
+        putBeeperLine();
+        reset();
+    }
+
+    turnRight();
+    
+    moveUntilBlocked();
+}
+
+function putBeeperLine() {
+    putBeeper();
+    while (frontIsClear()) {
+        move();
+        putBeeper();
+    }
+}
+
+function moveUntilBlocked() {
+    while (frontIsClear()) {
+        move();
+    }
+}
+
+function reset() {
+    turnLeft();
+    turnLeft();
+    moveUntilBlocked();
+    turnRight();
+}
+

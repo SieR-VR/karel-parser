@@ -1,0 +1,29 @@
+function turnRight() {
+    turnLeft();
+    turnLeft();
+    turnLeft();
+} 
+
+function turnAround() {
+    turnLeft();
+    turnLeft();
+}
+
+function main() {
+    move();
+    move();
+    turnRight();
+    move();
+    turnLeft();
+    move();
+    pickBeeper();
+    turnAround();
+    move();
+    move();
+    turnRight();
+    move();
+    putBeeper();
+    turnLeft();
+    move();
+    turnAround();
+}
