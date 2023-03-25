@@ -6,11 +6,17 @@ import { parse } from "../parser";
 
 const karelDir = path.join(__dirname, "./karel");
 
-fs.rmSync(path.join(__dirname, "./error"), { recursive: true });
-fs.rmSync(path.join(__dirname, "./passed"), { recursive: true });
+if (fs.existsSync(path.join(__dirname, "./error"))) {
+    fs.rmSync(path.join(__dirname, "./error"), { recursive: true });
+}
+
+if (fs.existsSync(path.join(__dirname, "./passed"))) {
+    fs.rmSync(path.join(__dirname, "./passed"), { recursive: true });
+}
 
 fs.mkdirSync(path.join(__dirname, "./error"));
 fs.mkdirSync(path.join(__dirname, "./passed"));
+
 const files = fs.readdirSync(karelDir);
 
 files.filter((file) => file.endsWith(".karel")).forEach((file) => {
@@ -24,7 +30,7 @@ files.filter((file) => file.endsWith(".karel")).forEach((file) => {
             path.join(__dirname, `./error/${filenameWithoutExtension}.json`),
             JSON.stringify(tokensUnchecked.unwrap_err(), null, 2)
         );
-         
+
         return;
     }
 

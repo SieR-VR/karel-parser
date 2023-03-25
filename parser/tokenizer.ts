@@ -94,6 +94,54 @@ export function tokenize(input: string): Result<Token[], Diagnostic> {
             continue;
         }
 
+        if (char === '/') {
+            if (input[current + 1] === '/') {
+                while (char !== '\n') {
+                    if (current >= input.length) {
+                        continue;
+                    }
+
+                    char = input[current++];
+                    col++;
+                }
+
+                line++;
+                col = 0;
+                
+                continue;
+            }
+            else if (input[current + 1] === '*') {
+                current += 2;
+
+                while (char !== '*') {
+                    if (current >= input.length) {
+                        return Err({
+                            message: `Unexpected end of input`,
+                            severity: DiagnosticSeverity.Error,
+                            range: {
+                                start: { line, character: col },
+                                end: { line, character: col + 1 }
+                            },
+                        });
+                    }
+
+                    char = input[current++];
+                    if (char === '\n') {
+                        line++;
+                        col = 0;
+                    }
+                    else {
+                        col++;
+                    }
+                }
+
+                current++;
+                col++;
+
+                continue;
+            }
+        }
+
         const WHITESPACE = /[\r\t ]/;
         if (WHITESPACE.test(char)) {
             current++;

@@ -1,0 +1,13 @@
+// asdfasdfasdf
+
+/* 
+    multi-line comment
+*/
+
+function main() {
+    // in-function comment
+
+    /*
+        in-function multi-line comment
+    */
+}
